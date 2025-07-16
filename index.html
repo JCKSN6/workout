@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>56 Mile Ranks</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 1rem;
+      background-color: #0e1217;
+      font-family: 'Segoe UI', sans-serif;
+      color: #d0d7de;
+    }
+    h1 {
+      color: #7fc7ff;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .button-group {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 2rem;
+      gap: 1rem;
+    }
+    .toggle-button {
+      background: linear-gradient(135deg, #5ca3f9, #0a64ff);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .grid {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .card {
+      background-color: #19212e;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #3fa3ff33;
+    }
+    .card h2 {
+      color: #7fc7ff;
+      margin-bottom: 1rem;
+    }
+    .rank-logo {
+      width: 60px;
+      height: 60px;
+      margin: 0.5rem auto;
+      display: block;
+    }
+    label {
+      display: block;
+      margin-top: 0.5rem;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 10px;
+      border: none;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+    input {
+      background-color: #1c1c1c;
+      color: #ffffff;
+    }
+    button {
+      background: linear-gradient(135deg, #5ca3f9, #0a64ff);
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .rank-result {
+      background-color: #1e1e1e;
+      padding: 0.75rem;
+      border-radius: 10px;
+      margin-top: 0.5rem;
+    }
+    .food-card {
+      display: none;
+      background-color: #19212e;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-top: 2rem;
+    }
+    .food-item {
+      background-color: #1e1e1e;
+      padding: 0.5rem;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+    }
+    .remove-btn {
+      float: right;
+      background: none;
+      border: none;
+      color: #ff5f5f;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    #chart-container {
+      margin-top: 2rem;
+      background-color: #1e1e1e;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>56 Mile Ranks</h1>
+
+  <div class="button-group">
+    <button class="toggle-button" onclick="showSection('workout')">Workout Log</button>
+    <button class="toggle-button" onclick="showSection('food')">Food Log</button>
+  </div>
+
+  <div class="grid" id="workout-grid"></div>
+
+  <div class="food-card" id="food-section">
+    <h2>Food Log</h2>
+    <label for="food">Food</label>
+    <input type="text" id="food" placeholder="e.g. Chicken breast">
+    <button onclick="logFood()">Add Food</button>
+    <div id="foodList"></div>
+    <div id="totals">Total: 0 cal, 0g protein, 0g carbs, 0g fat</div>
+    <div id="chart-container">
+      <canvas id="calorieChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const workouts = [
+      "Bench Press", "Bicep Curls", "Hammer Curls", "Squat", "Leg Press",
+      "Leg Curls", "Shoulder Press", "Lat Pulldown", "Seated Cable Row",
+      "Tricep Pulldown", "Incline Press", "Lateral Raises", "Flys", "Pull Ups"
+    ];
+
+    const rankLogic = (name, weight, reps) => {
+      if (name === 'Pull Ups') {
+        if (reps >= 20) return 'The Apex';
+        if (reps >= 15) return 'Titan';
+        if (reps >= 8) return 'Iron Phantom';
+        return 'Steel Reaper';
+      }
+      const score = weight * reps;
+      if (score >= 3000) return 'The Apex';
+      if (score >= 1500) return 'Titan';
+      if (score >= 800) return 'Iron Phantom';
+      return 'Steel Reaper';
+    };
+
+    const getRankImage = (rank) => `./ranks/${rank.toLowerCase().replace(/ /g, '_')}.png`;
+
+    const container = document.getElementById('workout-grid');
+    workouts.forEach(name => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h2>${name}</h2>
+        <img class="rank-logo" src="./ranks/steel_reaper.png" alt="rank">
+        ${name !== 'Pull Ups' ? '<label>Weight (lbs)</label><input type="number" class="weight">' : ''}
+        <label>Reps</label>
+        <input type="number" class="reps">
+        <button>Update</button>
+        <div class="rank-result">Rank: —</div>
+      `;
+      const btn = card.querySelector('button');
+      const rankLabel = card.querySelector('.rank-result');
+      const rankImg = card.querySelector('img');
+      btn.onclick = () => {
+        const weight = name !== 'Pull Ups' ? parseInt(card.querySelector('.weight').value) : 0;
+        const reps = parseInt(card.querySelector('.reps').value);
+        const rank = rankLogic(name, weight, reps);
+        rankLabel.innerText = `Rank: ${rank}`;
+        rankImg.src = getRankImage(rank);
+        rankImg.alt = rank;
+      };
+      container.appendChild(card);
+    });
+
+    function showSection(section) {
+      document.getElementById('workout-grid').style.display = section === 'workout' ? 'grid' : 'none';
+      document.getElementById('food-section').style.display = section === 'food' ? 'block' : 'none';
+    }
+
+    showSection('workout');
+
+    let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
+
+    async function logFood() {
+      const foodInput = document.getElementById('food');
+      const foodName = foodInput.value.trim();
+      if (!foodName) return;
+
+      const res = await fetch(`https://trackapi.nutritionix.com/v2/natural/nutrients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-app-id': 'YOUR_APP_ID',
+          'x-app-key': 'YOUR_APP_KEY'
+        },
+        body: JSON.stringify({ query: foodName })
+      });
+      const data = await res.json();
+      const item = data.foods[0];
+      const calories = Math.round(item.nf_calories);
+      const protein = Math.round(item.nf_protein);
+      const carbs = Math.round(item.nf_total_carbohydrate);
+      const fat = Math.round(item.nf_total_fat);
+
+      totalCalories += calories;
+      totalProtein += protein;
+      totalCarbs += carbs;
+      totalFat += fat;
+
+      const div = document.createElement('div');
+      div.className = 'food-item';
+      div.innerHTML = `${item.food_name} - ${calories} cal, ${protein}g P, ${carbs}g C, ${fat}g F <button class='remove-btn' onclick='this.parentElement.remove(); recalcTotals(${calories}, ${protein}, ${carbs}, ${fat});'>&times;</button>`;
+      document.getElementById('foodList').appendChild(div);
+      updateTotal();
+      updateChart();
+      foodInput.value = '';
+    }
+
+    function recalcTotals(cal, prot, carbs, fat) {
+      totalCalories -= cal;
+      totalProtein -= prot;
+      totalCarbs -= carbs;
+      totalFat -= fat;
+      updateTotal();
+      updateChart();
+    }
+
+    function updateTotal() {
+      document.getElementById('totals').innerText = `Total: ${totalCalories} cal, ${totalProtein}g protein, ${totalCarbs}g carbs, ${totalFat}g fat`;
+    }
+
+    const ctx = document.getElementById('calorieChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)'],
+        datasets: [{
+          data: [0, 0, 0, 0],
+          backgroundColor: ['#3fa3ff', '#28a745', '#ffc107', '#dc3545']
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#d0d7de' } }
+        }
+      }
+    });
+
+    function updateChart() {
+      chart.data.datasets[0].data = [totalCalories, totalProtein, totalCarbs, totalFat];
+      chart.update();
+    }
+  </script>
+</body>
+</html>
